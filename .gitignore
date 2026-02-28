@@ -6,3 +6,4 @@ __pycache__/
 .vite/
 *.egg-info/
 .mypy_cache/
+legacy/

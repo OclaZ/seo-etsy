@@ -165,8 +165,8 @@ Download from: https://git-scm.com/downloads
 ### Step 1: Get the project
 
 ```bash
-git clone https://github.com/ISTIFANO/SEOINJECTER.git
-cd SEOINJECTER
+git clone https://github.com/ISTIFANO/SEO-Image-Toolkit.git
+cd SEO-Image-Toolkit
 ```
 
 ### Step 2: Set up the backend

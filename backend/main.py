@@ -8,7 +8,7 @@ from app.services.session_manager import cleanup_expired_sessions
 from app.config import UPLOAD_DIR
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)

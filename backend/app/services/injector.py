@@ -24,6 +24,9 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
     ext = os.path.splitext(image_path)[1].lower()
     filename = os.path.basename(image_path)
 
+    logger.debug(f"[{filename}] keywords_str={keywords_str[:80]}...")
+    logger.debug(f"[{filename}] seo_settings={seo_settings}")
+
     # Resolve per-field values
     settings = seo_settings or {}
     title_val = _resolve_field_value(settings.get("title"), keywords_str)
@@ -31,6 +34,9 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
     tags_val = _resolve_field_value(settings.get("tags"), keywords_str)
     description_val = _resolve_field_value(settings.get("description"), keywords_str)
     comments_val = _resolve_field_value(settings.get("comments"), keywords_str)
+
+    logger.debug(f"[{filename}] resolved -> title={title_val is not None}, subject={subject_val is not None}, "
+                 f"tags={tags_val is not None}, desc={description_val is not None}, comments={comments_val is not None}")
 
     img = Image.open(image_path)
 
@@ -94,6 +100,22 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
             exif_bytes = piexif.dump(exif_dict)
             piexif.insert(exif_bytes, image_path)
             logger.info(f"JPEG metadata injected: {filename}")
+
+            # --- Verify tags were written ---
+            verify = piexif.load(image_path)
+            v_tags = {
+                "Title": bool(verify["0th"].get(0x9C9B)),
+                "Subject": bool(verify["0th"].get(0x9C9F)),
+                "Keywords": bool(verify["0th"].get(0x9C9E)),
+                "Description": bool(verify["0th"].get(270)),
+                "Comments": bool(verify["0th"].get(0x9C9C)),
+                "UserComment": bool(verify["Exif"].get(37510)),
+            }
+            missing = [k for k, v in v_tags.items() if not v]
+            if missing:
+                logger.warning(f"[{filename}] VERIFY FAILED — missing: {missing}")
+            else:
+                logger.info(f"[{filename}] VERIFY OK — all 6 metadata fields present")
         except Exception as e:
             logger.error(f"Failed to save EXIF for {filename}: {e}")
             fallback_dict = {

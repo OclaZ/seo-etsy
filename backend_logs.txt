@@ -1,0 +1,37 @@
+INFO:     Started server process [25280]
+INFO:     Waiting for application startup.
+2026-02-28 14:45:55,809 - main - INFO - Upload directory: C:\Users\aamir\AppData\Local\Temp\etsy_seo_toolkit
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57281 - "GET /api/health HTTP/1.1" 200 OK
+2026-02-28 14:46:24,926 - python_multipart.multipart - DEBUG - Calling on_part_begin with no data
+2026-02-28 14:46:24,926 - python_multipart.multipart - DEBUG - Calling on_header_field with data[36:55]
+2026-02-28 14:46:24,926 - python_multipart.multipart - DEBUG - Calling on_header_value with data[57:101]
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_header_end with no data
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_header_field with data[103:115]
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_header_value with data[117:127]
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_header_end with no data
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_headers_finished with no data
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_part_data with data[131:956]
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_part_end with no data
+2026-02-28 14:46:24,927 - python_multipart.multipart - DEBUG - Calling on_end with no data
+2026-02-28 14:46:24,929 - app.services.session_manager - INFO - Created session: 87a1ca1494e6
+2026-02-28 14:46:24,930 - app.routers.images - INFO - Saved: test.jpg (825 bytes)
+INFO:     127.0.0.1:52354 - "POST /api/upload-images HTTP/1.1" 200 OK
+2026-02-28 14:46:26,981 - app.routers.keywords - INFO - Saved 2 keywords for session 87a1ca1494e6
+INFO:     127.0.0.1:52356 - "POST /api/upload-keywords-text HTTP/1.1" 200 OK
+2026-02-28 14:46:29,013 - app.services.renamer - INFO - Renamed: test.jpg -> bag.jpg
+INFO:     127.0.0.1:52358 - "POST /api/rename-images HTTP/1.1" 200 OK
+2026-02-28 14:46:31,034 - app.routers.images - INFO - [inject] session=87a1ca1494e6, keywords_count=2, selected_files=['bag.jpg'], has_seo_settings=False
+2026-02-28 14:46:31,034 - app.routers.images - INFO - [inject] final keywords (2): ['leather bag', 'handmade']...
+2026-02-28 14:46:31,035 - app.routers.images - INFO - [inject] files on disk: ['bag.jpg']
+2026-02-28 14:46:31,035 - app.services.injector - INFO - Injecting keywords into 1 images in C:\Users\aamir\AppData\Local\Temp\etsy_seo_toolkit\87a1ca1494e6\images
+2026-02-28 14:46:31,035 - app.services.injector - DEBUG - [bag.jpg] keywords_str=leather bag, handmade...
+2026-02-28 14:46:31,035 - app.services.injector - DEBUG - [bag.jpg] seo_settings=None
+2026-02-28 14:46:31,035 - app.services.injector - DEBUG - [bag.jpg] resolved -> title=True, subject=True, tags=True, desc=True, comments=True
+2026-02-28 14:46:31,053 - app.services.injector - INFO - JPEG metadata injected: bag.jpg
+2026-02-28 14:46:31,072 - app.services.injector - INFO - [bag.jpg] VERIFY OK — all 6 metadata fields present
+2026-02-28 14:46:31,073 - app.services.injector - INFO - Injection complete: 1 success, 0 errors
+2026-02-28 14:46:31,073 - app.routers.images - INFO - [inject] result: 1 success, 0 errors
+INFO:     127.0.0.1:52360 - "POST /api/inject-keywords HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52362 - "GET /api/download-results?session_id=87a1ca1494e6 HTTP/1.1" 200 OK

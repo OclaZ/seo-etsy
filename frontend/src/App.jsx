@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { useAppState, useAppDispatch } from './context/AppContext';
 import {
@@ -25,12 +25,14 @@ import ProcessButton from './components/process/ProcessButton';
 import ProgressBar from './components/process/ProgressBar';
 import ResultsSummary from './components/results/ResultsSummary';
 import DownloadButton from './components/results/DownloadButton';
+import HowToUsePage from './components/howtouse/HowToUsePage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
   const state = useAppState();
   const dispatch = useAppDispatch();
   const previewTimeout = useRef(null);
+  const [currentPage, setCurrentPage] = useState('app');
 
   const showToast = useCallback(
     (message, type = 'success') => {
@@ -162,16 +164,28 @@ export default function App() {
       const selectedOriginals = new Set(
         state.selectedImages.map((i) => state.images[i]?.name).filter(Boolean)
       );
-      const filesToInject = renameData.results
+      const selectedFiles = renameData.results
         .filter((r) => selectedOriginals.has(r.original))
         .map((r) => r.renamed);
-      const injectData = await injectKeywords(state.sessionId, state.keywords, state.seoSettings, filesToInject);
+      const unselectedFiles = renameData.results
+        .filter((r) => !selectedOriginals.has(r.original))
+        .map((r) => r.renamed);
+
+      // Selected images → custom SEO settings
+      const injectData = await injectKeywords(state.sessionId, state.keywords, state.seoSettings, selectedFiles);
+
+      // Unselected images → default keywords (all fields enabled, no custom settings)
+      let defaultInjectData = { results: [], errors: [] };
+      if (unselectedFiles.length > 0) {
+        defaultInjectData = await injectKeywords(state.sessionId, state.keywords, null, unselectedFiles);
+      }
+
       dispatch({
         type: 'SET_RESULTS',
         payload: {
           renamed: renameData.results,
-          injected: injectData.results,
-          errors: [...renameData.errors, ...injectData.errors],
+          injected: [...injectData.results, ...defaultInjectData.results],
+          errors: [...renameData.errors, ...injectData.errors, ...defaultInjectData.errors],
         },
       });
       dispatch({ type: 'SET_STEP', payload: 4 });
@@ -181,7 +195,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.sessionId, state.baseName, state.keywords, state.seoSettings, dispatch, showToast]);
+  }, [state.sessionId, state.baseName, state.keywords, state.seoSettings, state.selectedImages, state.images, dispatch, showToast]);
 
   // --- Navigation ---
   const canGoToStep2 = state.images.length > 0 && state.keywords.length > 0;
@@ -200,132 +214,138 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
-      <Header dark={dark} onToggleTheme={toggle} />
+      <Header dark={dark} onToggleTheme={toggle} currentPage={currentPage} onNavigate={setCurrentPage} />
 
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-4">
-        <StepIndicator currentStep={state.step} />
+      {currentPage === 'app' && (
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-4">
+          <StepIndicator currentStep={state.step} />
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
-          {/* Step 1: Upload */}
-          {state.step === 1 && (
-            <div className="animate-fade-in">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                Upload Your Images & Keywords
-              </h2>
-              <ImageDropzone onDrop={handleImageDrop} />
-              <ImagePreviewGrid
-                files={state.images}
-                onRemove={handleRemoveImage}
-              />
-              <KeywordUploader
-                keywords={state.keywords}
-                onFileUpload={handleKeywordFile}
-                onTextSubmit={handleKeywordText}
-              />
-            </div>
-          )}
-
-          {/* Step 2: Configure */}
-          {state.step === 2 && (
-            <div className="animate-fade-in">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                Configure SEO Settings
-              </h2>
-              <ImageSelector
-                images={state.images}
-                selectedImages={state.selectedImages}
-                onToggle={handleToggleImage}
-                onSelectAll={handleSelectAllImages}
-                onDeselectAll={handleDeselectAllImages}
-              />
-              <BaseNameInput
-                value={state.baseName}
-                onChange={handleBaseNameChange}
-              />
-              <RenamePreview preview={state.renamePreview} />
-              <SeoMetadataSettings
-                settings={state.seoSettings}
-                onFieldChange={handleSeoFieldChange}
-                onSetAll={handleSetAllSeoFields}
-              />
-            </div>
-          )}
-
-          {/* Step 3: Process */}
-          {state.step === 3 && (
-            <div className="animate-fade-in">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                Ready to Optimize
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-orange-500">
-                    {state.selectedImages.length} / {state.images.length}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Images Selected</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-orange-500">
-                    {state.keywords.length}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Keywords</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-orange-500 truncate">
-                    {state.baseName}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Base Name
-                  </p>
-                </div>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 sm:p-8">
+            {/* Step 1: Upload */}
+            {state.step === 1 && (
+              <div className="animate-fade-in">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  Upload Your Images & Keywords
+                </h2>
+                <ImageDropzone onDrop={handleImageDrop} />
+                <ImagePreviewGrid
+                  files={state.images}
+                  onRemove={handleRemoveImage}
+                />
+                <KeywordUploader
+                  keywords={state.keywords}
+                  onFileUpload={handleKeywordFile}
+                  onTextSubmit={handleKeywordText}
+                />
               </div>
-              <ProcessButton
-                onClick={handleProcess}
-                processing={state.processing}
-              />
-              {state.processing && (
-                <ProgressBar progress={50} label="Processing images..." />
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Step 4: Results */}
-          {state.step === 4 && (
-            <div>
-              <ResultsSummary results={state.results} />
-              <DownloadButton
-                sessionId={state.sessionId}
-                onReset={handleReset}
-              />
-            </div>
-          )}
+            {/* Step 2: Configure */}
+            {state.step === 2 && (
+              <div className="animate-fade-in">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  Configure SEO Settings
+                </h2>
+                <ImageSelector
+                  images={state.images}
+                  selectedImages={state.selectedImages}
+                  onToggle={handleToggleImage}
+                  onSelectAll={handleSelectAllImages}
+                  onDeselectAll={handleDeselectAllImages}
+                />
+                <BaseNameInput
+                  value={state.baseName}
+                  onChange={handleBaseNameChange}
+                />
+                <RenamePreview preview={state.renamePreview} />
+                <SeoMetadataSettings
+                  settings={state.seoSettings}
+                  onFieldChange={handleSeoFieldChange}
+                  onSetAll={handleSetAllSeoFields}
+                />
+              </div>
+            )}
 
-          {/* Navigation Buttons */}
-          {state.step < 4 && (
-            <div className="flex justify-between mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
-              <button
-                onClick={handleBack}
-                disabled={state.step === 1}
-                className="px-6 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                ← Back
-              </button>
-              {state.step < 3 && (
+            {/* Step 3: Process */}
+            {state.step === 3 && (
+              <div className="animate-fade-in">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                  Ready to Optimize
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-orange-500">
+                      {state.selectedImages.length} / {state.images.length}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Images Selected</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-orange-500">
+                      {state.keywords.length}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Keywords</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-orange-500 truncate">
+                      {state.baseName}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Base Name
+                    </p>
+                  </div>
+                </div>
+                <ProcessButton
+                  onClick={handleProcess}
+                  processing={state.processing}
+                />
+                {state.processing && (
+                  <ProgressBar progress={50} label="Processing images..." />
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Results */}
+            {state.step === 4 && (
+              <div>
+                <ResultsSummary results={state.results} />
+                <DownloadButton
+                  sessionId={state.sessionId}
+                  onReset={handleReset}
+                />
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            {state.step < 4 && (
+              <div className="flex justify-between mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
                 <button
-                  onClick={handleNext}
-                  disabled={
-                    (state.step === 1 && !canGoToStep2) ||
-                    (state.step === 2 && !canGoToStep3)
-                  }
-                  className="px-6 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleBack}
+                  disabled={state.step === 1}
+                  className="px-6 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  Next →
+                  ← Back
                 </button>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
+                {state.step < 3 && (
+                  <button
+                    onClick={handleNext}
+                    disabled={
+                      (state.step === 1 && !canGoToStep2) ||
+                      (state.step === 2 && !canGoToStep3)
+                    }
+                    className="px-6 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+
+      {currentPage === 'howto' && (
+        <HowToUsePage onBackToApp={() => setCurrentPage('app')} />
+      )}
 
       <Footer />
 

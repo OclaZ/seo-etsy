@@ -92,6 +92,9 @@ async def inject_keywords_endpoint(request: InjectRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     keywords = request.keywords
+    logger.info(f"[inject] session={request.session_id}, keywords_count={len(keywords) if keywords else 0}, "
+                f"selected_files={request.selected_files}, has_seo_settings={request.seo_settings is not None}")
+
     if not keywords:
         keywords_path = session_manager.get_keywords_path(request.session_id)
         if not keywords_path.exists():
@@ -108,6 +111,8 @@ async def inject_keywords_endpoint(request: InjectRequest):
     if not keywords:
         raise HTTPException(status_code=400, detail="No keywords found")
 
+    logger.info(f"[inject] final keywords ({len(keywords)}): {keywords[:5]}...")
+
     seo_dict = None
     if request.seo_settings:
         seo_dict = {
@@ -117,10 +122,19 @@ async def inject_keywords_endpoint(request: InjectRequest):
             "description": request.seo_settings.description.model_dump(),
             "comments": request.seo_settings.comments.model_dump(),
         }
+        logger.info(f"[inject] seo_dict={seo_dict}")
+
+    # List files on disk before injection
+    disk_files = [f.name for f in images_dir.iterdir() if f.is_file()]
+    logger.info(f"[inject] files on disk: {disk_files}")
 
     successes, errors = injector.inject_keywords(
         str(images_dir), keywords, seo_dict, request.selected_files
     )
+    logger.info(f"[inject] result: {len(successes)} success, {len(errors)} errors")
+    if errors:
+        logger.error(f"[inject] errors: {errors}")
+
     return InjectResponse(
         session_id=request.session_id,
         injected_count=len(successes),

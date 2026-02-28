@@ -1,37 +1,12 @@
+<p align="center">
+  <img src="frontend/public/imgs/Logotipo_Carrito_de_Compras_de_Supermercado_Minimalista_Naranja_y_Rojo-removebg-preview.png" alt="SEO Image Toolkit Logo" width="400" />
+</p>
+
 # SEO-Image-Toolkit
 
 **By Aamir El Amiri**
 
 A full-stack web application that optimizes your Etsy product images for SEO. It renames image files with keyword-rich names and injects SEO keywords directly into image metadata (EXIF & PNG) — helping your listings rank higher in Etsy search.
-
----
-
-## Screenshots
-
-### Step 1 — Upload Images & Keywords
-![Upload Page](frontend/public/imgs/image1-uploadimgs.png)
-
-### Step 2 — Configure SEO Settings
-![Configure Page](frontend/public/imgs/configure-page.png)
-
-### Step 3 — Process
-![Process Page](frontend/public/imgs/Process-page.png)
-
-### Step 4 — Download Results
-![Download Page](frontend/public/imgs/dowload-page.png)
-
-### Final Result — Metadata in Image Properties
-![Result](frontend/public/imgs/resultat-final.png)
-
----
-
-## Video Tutorial
-
-The app includes a built-in **"How to Use"** page accessible from the navbar. It features a full video walkthrough and a step-by-step guide with screenshots.
-
-https://github.com/user-attachments/assets/howtouse-saas.mp4
-
-> Click **"How to Use"** in the top navbar to watch the video and follow the illustrated guide inside the app.
 
 ---
 

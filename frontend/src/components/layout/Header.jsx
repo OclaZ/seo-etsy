@@ -11,7 +11,7 @@ export default function Header({ dark, onToggleTheme, currentPage, onNavigate })
           <img
             src="/imgs/Logotipo_Carrito_de_Compras_de_Supermercado_Minimalista_Naranja_y_Rojo-removebg-preview.png"
             alt="SEO Injecter Logo"
-            className="h-20 w-auto -my-4"
+            className="h-28 w-auto -my-6"
           />
         </button>
 

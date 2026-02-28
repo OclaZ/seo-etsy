@@ -47,6 +47,7 @@ https://github.com/user-attachments/assets/howtouse-saas.mp4
 | Default Keywords for Unselected Images | Images not selected for custom SEO still get all uploaded keywords injected into all 4 metadata fields |
 | Metadata Inspector | Standalone tool to upload any image and view all its embedded metadata (EXIF, XP tags, GPS, PNG chunks) |
 | Image Scraper | Enter any website URL to extract and download all images — with Cloudflare bypass support |
+| Image Converter | Convert images between formats (JPG, PNG, JPEG) — supports BMP, TIFF, GIF, WEBP, AVIF, HEIC, SVG input |
 | Bulk Processing | Process up to 50 images at once |
 | Dynamic ZIP Download | Download all optimized images as a ZIP with unique filename (`aamir-{count}images-{random}.zip`) |
 | Interactive Tutorial Page | Built-in "How to Use" page with video walkthrough and 5-step illustrated guide |
@@ -104,7 +105,8 @@ SEO-Image-Toolkit/
 │       │   ├── images.py       # Upload, rename, inject, download
 │       │   ├── keywords.py     # Keyword file/text upload
 │       │   ├── metadata.py     # Metadata inspector endpoint
-│       │   └── scraper.py      # Image scraper & download endpoints
+│       │   ├── scraper.py      # Image scraper & download endpoints
+│       │   └── converter.py   # Image format converter endpoint
 │       ├── services/
 │       │   ├── renamer.py      # Image rename logic
 │       │   ├── injector.py     # EXIF/PNG keyword injection (piexif.insert)
@@ -135,6 +137,7 @@ SEO-Image-Toolkit/
 │       │   ├── process/        # ProcessButton, ProgressBar, ProcessingOverlay
 │       │   ├── results/        # ResultsSummary, DownloadButton
 │       │   ├── scraper/        # ImageScraperPage
+│       │   ├── converter/      # ImageConverterPage
 │       │   ├── howtouse/       # HowToUsePage, VideoSection, StepGuide
 │       │   ├── metadata/       # MetadataCheckerPage
 │       │   └── ui/             # Toast notifications, ThemeToggle
@@ -276,6 +279,23 @@ Open your browser and go to: **http://localhost:5173**
 - Click **"Download X Images (.zip)"** to download selected images as a ZIP
 - Supports Cloudflare-protected sites via automatic bypass (cloudscraper fallback)
 
+### Image Converter (Standalone Tool)
+- Click **"Converter"** in the navbar
+- Drag & drop or browse to upload multiple images in any format:
+  - **Supported input formats:** JPG, JPEG, PNG, BMP, TIFF, GIF, WEBP, AVIF, SVG, ICO, HEIC, HEIF
+- Each uploaded image shows a thumbnail preview with a color-coded format badge and file size
+- Remove individual images with the X button, or use **"Clear All"** to start over
+- Choose your target format by clicking one of the 3 format cards:
+  - **JPG** — Best for photos & web images
+  - **PNG** — Supports transparency
+  - **JPEG** — Same as JPG, full extension
+- Click **"Convert X Images to FORMAT"** to start conversion
+- Animated spinner shows progress during conversion
+- Once complete, click **"Download Converted Images (.zip)"** to get all converted images as a ZIP
+- Click **"Convert More"** to reset and convert another batch
+- Handles RGBA/transparent images gracefully — converts to white background for JPG/JPEG output
+- Up to 50 images, 20 MB each
+
 ---
 
 ## Running with Docker
@@ -307,6 +327,7 @@ docker-compose down
 | POST | `/api/check-metadata` | Upload an image and get all its metadata (EXIF, XP tags, GPS, PNG chunks) |
 | POST | `/api/scrape-images` | Extract all image URLs from a website (with Cloudflare bypass) |
 | POST | `/api/download-scraped` | Download selected scraped images as a ZIP file |
+| POST | `/api/convert-images` | Convert uploaded images to a target format (jpg/jpeg/png) and download as ZIP |
 | GET | `/api/health` | Health check |
 
 Full interactive API docs: http://localhost:8000/docs

@@ -127,7 +127,7 @@ export default function App() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
     try {
       const renameData = await renameImages(state.sessionId, state.baseName);
-      const injectData = await injectKeywords(state.sessionId);
+      const injectData = await injectKeywords(state.sessionId, state.keywords);
       dispatch({
         type: 'SET_RESULTS',
         payload: {
@@ -143,7 +143,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.sessionId, state.baseName, dispatch, showToast]);
+  }, [state.sessionId, state.baseName, state.keywords, dispatch, showToast]);
 
   // --- Navigation ---
   const canGoToStep2 = state.images.length > 0 && state.keywords.length > 0;

@@ -48,7 +48,7 @@ A full-stack web application that optimizes your Etsy product images for SEO. It
 ## Project Structure
 
 ```
-Etsy Store/
+SEO-Injecter/
 ├── backend/                    # FastAPI REST API
 │   ├── main.py                 # App entry point
 │   ├── requirements.txt        # Python dependencies
@@ -144,8 +144,8 @@ cd "Etsy Store"
 Or if cloning from Git:
 
 ```bash
-git clone https://github.com/ISTIFANO/etsy-seo-image-toolkit.git
-cd etsy-seo-image-toolkit
+git clone https://github.com/ISTIFANO/SEO-Injecter.git
+cd SEO-Injecter
 ```
 
 ### Step 2: Set up the backend
@@ -360,3 +360,4 @@ npm install
 ## License
 
 This project is proprietary software by **Aamir El Amiri**.
+# SEO-Image-Toolkit

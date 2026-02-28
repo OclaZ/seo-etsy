@@ -20,18 +20,50 @@ A full-stack web application that optimizes your Etsy product images for SEO. It
 ### Step 4 — Download Results
 ![Download Page](frontend/public/imgs/dowload-page.png)
 
+### Final Result — Metadata in Image Properties
+![Result](frontend/public/imgs/resultat-final.png)
+
 ---
 
-## What It Does
+## Features
 
 | Feature | Description |
 |---------|-------------|
-| SEO Image Renaming | Renames files like `IMG_001.jpg` to `Leather-laptop-backpack.jpg` |
-| EXIF Keyword Injection | Writes keywords into JPEG metadata (ImageDescription, XPKeywords, UserComment) |
-| PNG Keyword Injection | Adds keyword text chunks to PNG metadata |
+| SEO Image Renaming | Renames files like `IMG_001.jpg` to `Leather-laptop-backpack.jpg` with live preview |
+| Full EXIF Metadata Injection | Writes to all 6 JPEG fields: Title, Subject, Tags/Keywords, Description, Comments, UserComment |
+| PNG Metadata Injection | Adds Keywords, Title, Subject, Description, Comment text chunks to PNG files |
+| Per-Field SEO Control | Toggle each metadata field on/off, choose between auto-keywords or custom text per field |
+| Image Selector with Thumbnails | Visual grid with thumbnail previews to select which images to optimize |
 | Bulk Processing | Process up to 50 images at once |
-| ZIP Download | Download all optimized images as a single ZIP file |
+| Dynamic ZIP Download | Download all optimized images as a ZIP with unique filename (`aamir-{count}images-{random}.zip`) |
 | Dark / Light Mode | Toggle between dark and light themes |
+| Keyword Upload | Upload keywords from `.txt` file or type them manually |
+| Session Management | Auto-cleanup of expired sessions after 60 minutes |
+
+---
+
+## How Metadata Injection Works
+
+The app injects SEO keywords into image metadata fields that are visible in file properties (right-click > Properties > Details on Windows):
+
+### JPEG Images
+| Metadata Field | EXIF Tag | Windows Property |
+|----------------|----------|-----------------|
+| Title | XPTitle (0x9C9B) | Title |
+| Subject | XPSubject (0x9C9F) | Subject |
+| Tags/Keywords | XPKeywords (0x9C9E) | Tags |
+| Description | ImageDescription (270) | Description |
+| Comments | XPComment (0x9C9C) | Comments |
+| UserComment | UserComment (37510) | — |
+
+### PNG Images
+Injected as text chunks: `Keywords`, `Title`, `Subject`, `Description`, `Comment`.
+
+### Per-Field Control
+Each field can be individually:
+- **Enabled / Disabled** — toggle on or off
+- **Auto mode** — uses your uploaded keywords
+- **Custom mode** — set a custom value (e.g., a specific title or description)
 
 ---
 
@@ -52,7 +84,6 @@ SEO-Image-Toolkit/
 ├── backend/                    # FastAPI REST API
 │   ├── main.py                 # App entry point
 │   ├── requirements.txt        # Python dependencies
-│   ├── .env                    # Environment variables (not in git)
 │   ├── .env.example            # Template for .env
 │   ├── Dockerfile
 │   └── app/
@@ -62,11 +93,11 @@ SEO-Image-Toolkit/
 │       │   └── keywords.py     # Keyword file/text upload
 │       ├── services/
 │       │   ├── renamer.py      # Image rename logic
-│       │   ├── injector.py     # EXIF/PNG keyword injection
-│       │   ├── session_manager.py
-│       │   └── zipper.py       # ZIP creation
+│       │   ├── injector.py     # EXIF/PNG keyword injection (piexif.insert)
+│       │   ├── session_manager.py  # Session lifecycle & cleanup
+│       │   └── zipper.py       # ZIP creation with dynamic naming
 │       ├── models/
-│       │   └── schemas.py      # Request/response models
+│       │   └── schemas.py      # Pydantic request/response models
 │       └── utils/
 │           └── file_utils.py   # Validation helpers
 │
@@ -74,17 +105,26 @@ SEO-Image-Toolkit/
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.js
-│   ├── .env                    # Frontend env (not in git)
 │   ├── .env.example
 │   ├── Dockerfile
 │   └── src/
-│       ├── App.jsx             # Main app with step wizard
+│       ├── App.jsx             # Main app with 4-step wizard
 │       ├── main.jsx            # Entry point
-│       ├── index.css           # Tailwind styles
-│       ├── api/                # Axios API client
-│       ├── components/         # All UI components
-│       ├── context/            # Global state (AppContext)
-│       └── hooks/              # useTheme hook
+│       ├── index.css           # Tailwind styles + animations
+│       ├── api/
+│       │   ├── client.js       # Axios instance
+│       │   └── endpoints.js    # API call functions
+│       ├── components/
+│       │   ├── layout/         # Header, Footer, StepIndicator
+│       │   ├── upload/         # ImageDropzone, ImagePreviewGrid, KeywordUploader
+│       │   ├── configure/      # BaseNameInput, RenamePreview, SeoMetadataSettings, ImageSelector
+│       │   ├── process/        # ProcessButton, ProgressBar
+│       │   ├── results/        # ResultsSummary, DownloadButton
+│       │   └── ui/             # Toast notifications
+│       ├── context/
+│       │   └── AppContext.jsx  # Global state (useReducer)
+│       └── hooks/
+│           └── useTheme.js     # Dark/light mode hook
 │
 ├── legacy/                     # Original CLI scripts (reference)
 │   ├── code.py
@@ -100,25 +140,19 @@ SEO-Image-Toolkit/
 
 ## Prerequisites
 
-Before you start, make sure you have these installed on your computer:
+Before you start, make sure you have these installed:
 
 ### 1. Python (version 3.10 or higher)
 
 Download from: https://www.python.org/downloads/
 
-After installing, open a terminal and verify:
-
 ```bash
 python --version
 ```
 
-You should see something like `Python 3.13.x`.
-
 ### 2. Node.js (version 18 or higher)
 
 Download from: https://nodejs.org/
-
-After installing, verify:
 
 ```bash
 node --version
@@ -131,17 +165,9 @@ Download from: https://git-scm.com/downloads
 
 ---
 
-## Installation — Step by Step
+## Installation
 
 ### Step 1: Get the project
-
-If you have the project folder already, open a terminal and navigate to it:
-
-```bash
-cd "Etsy Store"
-```
-
-Or if cloning from Git:
 
 ```bash
 git clone https://github.com/ISTIFANO/SEO-Image-Toolkit.git
@@ -152,37 +178,17 @@ cd SEO-Image-Toolkit
 
 ```bash
 cd backend
-```
-
-Install Python dependencies:
-
-```bash
 pip install -r requirements.txt
-```
-
-Create your `.env` file (copy from example):
-
-```bash
 cp .env.example .env
 ```
 
 ### Step 3: Set up the frontend
 
-Open a **new terminal** and run:
+Open a **new terminal**:
 
 ```bash
 cd frontend
-```
-
-Install Node.js dependencies:
-
-```bash
 npm install
-```
-
-Create your `.env` file:
-
-```bash
 cp .env.example .env
 ```
 
@@ -199,13 +205,6 @@ cd backend
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-You should see:
-
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000
-INFO:     Started reloader process
-```
-
 ### Terminal 2 — Start the Frontend
 
 ```bash
@@ -213,61 +212,45 @@ cd frontend
 npm run dev
 ```
 
-You should see:
-
-```
-VITE v7.x.x  ready in XXX ms
-
-  ➜  Local:   http://localhost:5173/
-```
-
 ### Open the App
 
-Open your browser and go to:
-
-```
-http://localhost:5173
-```
-
-The app opens directly — no login required.
+Open your browser and go to: **http://localhost:5173**
 
 ---
 
 ## How to Use
 
-### 1. Upload Images
-- Drag and drop your product images (JPG, JPEG, PNG) into the upload zone
-- Or click "browse" to select files from your computer
-- Upload your keywords file (.txt, one keyword per line) or type them manually
+### 1. Upload (Step 1)
+- Drag & drop your product images (JPG, JPEG, PNG) into the upload zone
+- Upload a keyword file (`.txt`, one keyword per line) or type keywords manually
 
-### 2. Configure
-- Enter a base keyword for filenames (e.g., `Leather-laptop-backpack`)
-- See a live preview of how files will be renamed
+### 2. Configure (Step 2)
+- **Select images**: use the thumbnail grid to pick which images to optimize
+- **Base name**: enter a keyword-rich base name for file renaming (e.g., `Leather-laptop-backpack`)
+- **SEO Metadata Settings**: expand to configure each metadata field individually:
+  - Toggle fields on/off (Title, Subject, Tags, Description, Comments)
+  - Choose "Use keywords" (auto) or "Custom value" per field
+  - Use "Enable All" / "Disable All" for quick control
 
-### 3. Process
-- Review the summary (image count, keyword count, base name)
-- Click **"Optimize Images"** to rename files and inject keywords
+### 3. Process (Step 3)
+- Review summary: selected images count, keywords count, base name
+- Click **"Optimize Images"** to rename files and inject metadata
 
-### 4. Download
-- See the results summary (files renamed, keywords injected)
-- Click **"Download Optimized Images (.zip)"** to get your files
-- Click **"Start Over"** to process a new batch
+### 4. Download (Step 4)
+- See results summary (renamed files, injected metadata, any errors)
+- Click **"Download Optimized Images (.zip)"** — each download gets a unique filename
+- Click **"Start Over"** for a new batch
 
 ---
 
-## Running with Docker (Optional)
-
-If you have Docker installed, you can run both services with one command:
+## Running with Docker
 
 ```bash
 docker-compose up --build
 ```
 
-This starts:
-- Backend on http://localhost:8000
-- Frontend on http://localhost:5173
-
-To stop:
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
 
 ```bash
 docker-compose down
@@ -284,11 +267,11 @@ docker-compose down
 | POST | `/api/upload-keywords-text` | Submit keywords as text |
 | GET | `/api/rename-preview` | Preview renamed filenames |
 | POST | `/api/rename-images` | Execute bulk rename |
-| POST | `/api/inject-keywords` | Inject keywords into metadata |
+| POST | `/api/inject-keywords` | Inject keywords into metadata (with per-field SEO settings) |
 | GET | `/api/download-results` | Download processed images as ZIP |
 | GET | `/api/health` | Health check |
 
-Full interactive API docs available at: http://localhost:8000/docs
+Full interactive API docs: http://localhost:8000/docs
 
 ---
 
@@ -316,7 +299,6 @@ Full interactive API docs available at: http://localhost:8000/docs
 ## Troubleshooting
 
 ### "Port 8000 already in use"
-Another process is using the port. Kill it:
 
 ```bash
 # Windows
@@ -329,7 +311,6 @@ kill -9 <PID>
 ```
 
 ### "Module not found" errors (backend)
-Make sure you installed dependencies:
 
 ```bash
 cd backend
@@ -337,7 +318,6 @@ pip install -r requirements.txt
 ```
 
 ### "npm ERR!" errors (frontend)
-Delete `node_modules` and reinstall:
 
 ```bash
 cd frontend

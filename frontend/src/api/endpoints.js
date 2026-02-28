@@ -85,3 +85,15 @@ export async function checkMetadata(file) {
   const { data } = await client.post('/check-metadata', formData);
   return data;
 }
+
+export async function scrapeImages(url) {
+  const { data } = await client.post('/scrape-images', { url });
+  return data;
+}
+
+export async function downloadScrapedImages(images) {
+  const response = await client.post('/download-scraped', { images }, {
+    responseType: 'blob',
+  });
+  return response.data;
+}

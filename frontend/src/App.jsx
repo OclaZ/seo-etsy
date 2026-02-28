@@ -22,11 +22,12 @@ import RenamePreview from './components/configure/RenamePreview';
 import SeoMetadataSettings from './components/configure/SeoMetadataSettings';
 import ImageSelector from './components/configure/ImageSelector';
 import ProcessButton from './components/process/ProcessButton';
-import ProgressBar from './components/process/ProgressBar';
+import ProcessingOverlay from './components/process/ProcessingOverlay';
 import ResultsSummary from './components/results/ResultsSummary';
 import DownloadButton from './components/results/DownloadButton';
 import HowToUsePage from './components/howtouse/HowToUsePage';
 import MetadataCheckerPage from './components/metadata/MetadataCheckerPage';
+import ImageScraperPage from './components/scraper/ImageScraperPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
@@ -34,6 +35,7 @@ export default function App() {
   const dispatch = useAppDispatch();
   const previewTimeout = useRef(null);
   const [currentPage, setCurrentPage] = useState('app');
+  const [processingStatus, setProcessingStatus] = useState(null);
 
   const showToast = useCallback(
     (message, type = 'success') => {
@@ -158,10 +160,15 @@ export default function App() {
 
   // --- Step 3: Process Handler ---
   const handleProcess = useCallback(async () => {
+    const totalImages = state.images.length;
     dispatch({ type: 'SET_PROCESSING', payload: true });
+    setProcessingStatus({
+      phase: 'renaming', totalImages, renamedCount: 0, injectedCount: 0, errors: [], errorMessage: null,
+    });
+
     try {
+      // Phase 1: Rename
       const renameData = await renameImages(state.sessionId, state.baseName);
-      // Map selected original filenames → their renamed versions (which exist on disk)
       const selectedOriginals = new Set(
         state.selectedImages.map((i) => state.images[i]?.name).filter(Boolean)
       );
@@ -172,31 +179,67 @@ export default function App() {
         .filter((r) => !selectedOriginals.has(r.original))
         .map((r) => r.renamed);
 
-      // Selected images → custom SEO settings
-      const injectData = await injectKeywords(state.sessionId, state.keywords, state.seoSettings, selectedFiles);
+      const allErrors = [...renameData.errors];
 
-      // Unselected images → default keywords (all fields enabled, no custom settings)
+      setProcessingStatus((prev) => ({
+        ...prev,
+        phase: 'injecting-selected',
+        renamedCount: renameData.results.length,
+      }));
+
+      // Phase 2a: Inject selected images (custom SEO)
+      const injectData = await injectKeywords(state.sessionId, state.keywords, state.seoSettings, selectedFiles);
+      allErrors.push(...injectData.errors);
+      let totalInjected = injectData.results.length;
+
+      // Phase 2b: Inject unselected images (default keywords)
       let defaultInjectData = { results: [], errors: [] };
       if (unselectedFiles.length > 0) {
+        setProcessingStatus((prev) => ({
+          ...prev,
+          phase: 'injecting-unselected',
+          injectedCount: totalInjected,
+        }));
         defaultInjectData = await injectKeywords(state.sessionId, state.keywords, null, unselectedFiles);
+        allErrors.push(...defaultInjectData.errors);
+        totalInjected += defaultInjectData.results.length;
       }
 
+      // Phase 3: Done — store results
       dispatch({
         type: 'SET_RESULTS',
         payload: {
           renamed: renameData.results,
           injected: [...injectData.results, ...defaultInjectData.results],
-          errors: [...renameData.errors, ...injectData.errors, ...defaultInjectData.errors],
+          errors: allErrors,
         },
       });
-      dispatch({ type: 'SET_STEP', payload: 4 });
-      showToast('Optimization complete!');
+
+      setProcessingStatus((prev) => ({
+        ...prev,
+        phase: 'done',
+        injectedCount: totalInjected,
+        errors: allErrors,
+      }));
+      dispatch({ type: 'SET_PROCESSING', payload: false });
     } catch (err) {
-      showToast(err.response?.data?.detail || 'Processing failed', 'error');
-    } finally {
+      setProcessingStatus((prev) => ({
+        ...prev,
+        phase: 'error',
+        errorMessage: err.response?.data?.detail || 'Processing failed',
+      }));
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.sessionId, state.baseName, state.keywords, state.seoSettings, state.selectedImages, state.images, dispatch, showToast]);
+  }, [state.sessionId, state.baseName, state.keywords, state.seoSettings, state.selectedImages, state.images, dispatch]);
+
+  const handleProcessingComplete = useCallback(() => {
+    const hadError = processingStatus?.phase === 'error';
+    setProcessingStatus(null);
+    if (!hadError) {
+      dispatch({ type: 'SET_STEP', payload: 4 });
+      showToast('Optimization complete!');
+    }
+  }, [processingStatus, dispatch, showToast]);
 
   // --- Navigation ---
   const canGoToStep2 = state.images.length > 0 && state.keywords.length > 0;
@@ -270,37 +313,40 @@ export default function App() {
             {/* Step 3: Process */}
             {state.step === 3 && (
               <div className="animate-fade-in">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                  Ready to Optimize
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-orange-500">
-                      {state.selectedImages.length} / {state.images.length}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Images Selected</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-orange-500">
-                      {state.keywords.length}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Keywords</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-orange-500 truncate">
-                      {state.baseName}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Base Name
-                    </p>
-                  </div>
-                </div>
-                <ProcessButton
-                  onClick={handleProcess}
-                  processing={state.processing}
-                />
-                {state.processing && (
-                  <ProgressBar progress={50} label="Processing images..." />
+                {processingStatus ? (
+                  <ProcessingOverlay status={processingStatus} onComplete={handleProcessingComplete} />
+                ) : (
+                  <>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                      Ready to Optimize
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-orange-500">
+                          {state.selectedImages.length} / {state.images.length}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Images Selected</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-orange-500">
+                          {state.keywords.length}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Keywords</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-orange-500 truncate">
+                          {state.baseName}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Base Name
+                        </p>
+                      </div>
+                    </div>
+                    <ProcessButton
+                      onClick={handleProcess}
+                      processing={state.processing}
+                    />
+                  </>
                 )}
               </div>
             )}
@@ -317,7 +363,7 @@ export default function App() {
             )}
 
             {/* Navigation Buttons */}
-            {state.step < 4 && (
+            {state.step < 4 && !processingStatus && (
               <div className="flex justify-between mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
                 <button
                   onClick={handleBack}
@@ -350,6 +396,10 @@ export default function App() {
 
       {currentPage === 'metadata' && (
         <MetadataCheckerPage />
+      )}
+
+      {currentPage === 'scraper' && (
+        <ImageScraperPage />
       )}
 
       <Footer />

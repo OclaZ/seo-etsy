@@ -119,7 +119,6 @@ async def inject_keywords_endpoint(request: InjectRequest):
             "title": request.seo_settings.title.model_dump(),
             "subject": request.seo_settings.subject.model_dump(),
             "tags": request.seo_settings.tags.model_dump(),
-            "description": request.seo_settings.description.model_dump(),
             "comments": request.seo_settings.comments.model_dump(),
         }
         logger.info(f"[inject] seo_dict={seo_dict}")

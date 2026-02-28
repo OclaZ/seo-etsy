@@ -97,3 +97,14 @@ export async function downloadScrapedImages(images) {
   });
   return response.data;
 }
+
+export async function convertImages(files, format) {
+  const formData = new FormData();
+  files.forEach((f) => formData.append('files', f));
+  const response = await client.post('/convert-images', formData, {
+    params: { format },
+    responseType: 'blob',
+    timeout: 120000,
+  });
+  return response.data;
+}

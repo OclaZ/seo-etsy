@@ -19,6 +19,8 @@ import ImagePreviewGrid from './components/upload/ImagePreviewGrid';
 import KeywordUploader from './components/upload/KeywordUploader';
 import BaseNameInput from './components/configure/BaseNameInput';
 import RenamePreview from './components/configure/RenamePreview';
+import SeoMetadataSettings from './components/configure/SeoMetadataSettings';
+import ImageSelector from './components/configure/ImageSelector';
 import ProcessButton from './components/process/ProcessButton';
 import ProgressBar from './components/process/ProgressBar';
 import ResultsSummary from './components/results/ResultsSummary';
@@ -104,6 +106,35 @@ export default function App() {
     [dispatch]
   );
 
+  const handleSeoFieldChange = useCallback(
+    (field, value) => {
+      dispatch({ type: 'SET_SEO_FIELD', payload: { field, value } });
+    },
+    [dispatch]
+  );
+
+  const handleSetAllSeoFields = useCallback(
+    (value) => {
+      dispatch({ type: 'SET_ALL_SEO_FIELDS', payload: value });
+    },
+    [dispatch]
+  );
+
+  const handleToggleImage = useCallback(
+    (index) => {
+      dispatch({ type: 'TOGGLE_IMAGE_SELECTION', payload: index });
+    },
+    [dispatch]
+  );
+
+  const handleSelectAllImages = useCallback(() => {
+    dispatch({ type: 'SET_SELECTED_IMAGES', payload: state.images.map((_, i) => i) });
+  }, [state.images, dispatch]);
+
+  const handleDeselectAllImages = useCallback(() => {
+    dispatch({ type: 'SET_SELECTED_IMAGES', payload: [] });
+  }, [dispatch]);
+
   // Debounced rename preview
   useEffect(() => {
     if (state.step !== 2 || !state.baseName || !state.sessionId) {
@@ -127,7 +158,14 @@ export default function App() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
     try {
       const renameData = await renameImages(state.sessionId, state.baseName);
-      const injectData = await injectKeywords(state.sessionId, state.keywords);
+      // Map selected original filenames → their renamed versions (which exist on disk)
+      const selectedOriginals = new Set(
+        state.selectedImages.map((i) => state.images[i]?.name).filter(Boolean)
+      );
+      const filesToInject = renameData.results
+        .filter((r) => selectedOriginals.has(r.original))
+        .map((r) => r.renamed);
+      const injectData = await injectKeywords(state.sessionId, state.keywords, state.seoSettings, filesToInject);
       dispatch({
         type: 'SET_RESULTS',
         payload: {
@@ -143,7 +181,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.sessionId, state.baseName, state.keywords, dispatch, showToast]);
+  }, [state.sessionId, state.baseName, state.keywords, state.seoSettings, dispatch, showToast]);
 
   // --- Navigation ---
   const canGoToStep2 = state.images.length > 0 && state.keywords.length > 0;
@@ -193,11 +231,23 @@ export default function App() {
               <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                 Configure SEO Settings
               </h2>
+              <ImageSelector
+                images={state.images}
+                selectedImages={state.selectedImages}
+                onToggle={handleToggleImage}
+                onSelectAll={handleSelectAllImages}
+                onDeselectAll={handleDeselectAllImages}
+              />
               <BaseNameInput
                 value={state.baseName}
                 onChange={handleBaseNameChange}
               />
               <RenamePreview preview={state.renamePreview} />
+              <SeoMetadataSettings
+                settings={state.seoSettings}
+                onFieldChange={handleSeoFieldChange}
+                onSetAll={handleSetAllSeoFields}
+              />
             </div>
           )}
 
@@ -210,9 +260,9 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-orange-500">
-                    {state.images.length}
+                    {state.selectedImages.length} / {state.images.length}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Images</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Images Selected</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
                   <p className="text-2xl font-bold text-orange-500">

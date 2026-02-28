@@ -40,9 +40,25 @@ class RenameResponse(BaseModel):
     errors: list[str]
 
 
+class SeoFieldConfig(BaseModel):
+    enabled: bool = True
+    mode: str = "keywords"  # "keywords" or "custom"
+    custom_value: str = ""
+
+
+class SeoSettings(BaseModel):
+    title: SeoFieldConfig = SeoFieldConfig()
+    subject: SeoFieldConfig = SeoFieldConfig()
+    tags: SeoFieldConfig = SeoFieldConfig()
+    description: SeoFieldConfig = SeoFieldConfig()
+    comments: SeoFieldConfig = SeoFieldConfig()
+
+
 class InjectRequest(BaseModel):
     session_id: str
     keywords: list[str] | None = None
+    seo_settings: SeoSettings | None = None
+    selected_files: list[str] | None = None
 
 
 class InjectResponse(BaseModel):

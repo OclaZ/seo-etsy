@@ -108,7 +108,19 @@ async def inject_keywords_endpoint(request: InjectRequest):
     if not keywords:
         raise HTTPException(status_code=400, detail="No keywords found")
 
-    successes, errors = injector.inject_keywords(str(images_dir), keywords)
+    seo_dict = None
+    if request.seo_settings:
+        seo_dict = {
+            "title": request.seo_settings.title.model_dump(),
+            "subject": request.seo_settings.subject.model_dump(),
+            "tags": request.seo_settings.tags.model_dump(),
+            "description": request.seo_settings.description.model_dump(),
+            "comments": request.seo_settings.comments.model_dump(),
+        }
+
+    successes, errors = injector.inject_keywords(
+        str(images_dir), keywords, seo_dict, request.selected_files
+    )
     return InjectResponse(
         session_id=request.session_id,
         injected_count=len(successes),
@@ -119,16 +131,23 @@ async def inject_keywords_endpoint(request: InjectRequest):
 
 @router.get("/download-results")
 async def download_results(session_id: str = Query(...)):
+    import random
+    import string
+
     try:
         images_dir = session_manager.get_images_dir(session_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    nb_images = sum(1 for f in images_dir.iterdir() if f.is_file())
+    rand_suffix = "".join(random.choices(string.digits, k=6))
+    zip_name = f"aamir-{nb_images}images-{rand_suffix}.zip"
 
     zip_buffer = zipper.create_zip(str(images_dir))
     return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
         headers={
-            "Content-Disposition": "attachment; filename=seo-optimized-images.zip"
+            "Content-Disposition": f'attachment; filename="{zip_name}"'
         },
     )

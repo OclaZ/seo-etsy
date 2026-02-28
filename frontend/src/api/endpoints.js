@@ -39,11 +39,44 @@ export async function renameImages(sessionId, baseName) {
   return data;
 }
 
-export async function injectKeywords(sessionId, keywords = null) {
-  const { data } = await client.post('/inject-keywords', {
+export async function injectKeywords(sessionId, keywords = null, seoSettings = null, selectedFiles = null) {
+  const body = {
     session_id: sessionId,
     keywords,
-  });
+  };
+  if (selectedFiles && selectedFiles.length > 0) {
+    body.selected_files = selectedFiles;
+  }
+  if (seoSettings) {
+    body.seo_settings = {
+      title: {
+        enabled: seoSettings.title.enabled,
+        mode: seoSettings.title.mode,
+        custom_value: seoSettings.title.customValue,
+      },
+      subject: {
+        enabled: seoSettings.subject.enabled,
+        mode: seoSettings.subject.mode,
+        custom_value: seoSettings.subject.customValue,
+      },
+      tags: {
+        enabled: seoSettings.tags.enabled,
+        mode: seoSettings.tags.mode,
+        custom_value: seoSettings.tags.customValue,
+      },
+      description: {
+        enabled: seoSettings.description.enabled,
+        mode: seoSettings.description.mode,
+        custom_value: seoSettings.description.customValue,
+      },
+      comments: {
+        enabled: seoSettings.comments.enabled,
+        mode: seoSettings.comments.mode,
+        custom_value: seoSettings.comments.customValue,
+      },
+    };
+  }
+  const { data } = await client.post('/inject-keywords', body);
   return data;
 }
 

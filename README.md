@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/public/imgs/Logotipo_Carrito_de_Compras_de_Supermercado_Minimalista_Naranja_y_Rojo-removebg-preview.png" alt="SEO Image Toolkit Logo" width="400" />
+  <img src="frontend/public/imgs/Logotipo_Carrito_de_Compras_de_Supermercado_Minimalista_Naranja_y_Rojo-removebg-preview.png" alt="SEOINJECTER Logo" width="400" />
 </p>
 
-# SEO-Image-Toolkit
+# SEOINJECTER
 
 **By Aamir El Amiri**
 
@@ -68,7 +68,7 @@ Each field can be individually:
 ## Project Structure
 
 ```
-SEO-Image-Toolkit/
+SEOINJECTER/
 ├── backend/                    # FastAPI REST API
 │   ├── main.py                 # App entry point
 │   ├── requirements.txt        # Python dependencies
@@ -165,8 +165,8 @@ Download from: https://git-scm.com/downloads
 ### Step 1: Get the project
 
 ```bash
-git clone https://github.com/ISTIFANO/SEO-Image-Toolkit.git
-cd SEO-Image-Toolkit
+git clone https://github.com/ISTIFANO/SEOINJECTER.git
+cd SEOINJECTER
 ```
 
 ### Step 2: Set up the backend

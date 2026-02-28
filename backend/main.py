@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Etsy SEO Image Toolkit",
+    title="SEOINJECTER",
     description="Optimize your Etsy product images with SEO-friendly filenames and metadata keywords",
     version="1.0.0",
     lifespan=lifespan,
@@ -46,4 +46,4 @@ app.include_router(converter.router, prefix="/api", tags=["converter"])
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "Etsy SEO Image Toolkit"}
+    return {"status": "ok", "service": "SEOINJECTER"}

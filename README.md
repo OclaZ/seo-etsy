@@ -46,6 +46,7 @@ https://github.com/user-attachments/assets/howtouse-saas.mp4
 | Image Selector with Thumbnails | Visual grid with thumbnail previews to select which images to optimize |
 | Default Keywords for Unselected Images | Images not selected for custom SEO still get all uploaded keywords injected into all 4 metadata fields |
 | Metadata Inspector | Standalone tool to upload any image and view all its embedded metadata (EXIF, XP tags, GPS, PNG chunks) |
+| Image Scraper | Enter any website URL to extract and download all images — with Cloudflare bypass support |
 | Bulk Processing | Process up to 50 images at once |
 | Dynamic ZIP Download | Download all optimized images as a ZIP with unique filename (`aamir-{count}images-{random}.zip`) |
 | Interactive Tutorial Page | Built-in "How to Use" page with video walkthrough and 5-step illustrated guide |
@@ -82,7 +83,7 @@ Each field can be individually:
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.13, FastAPI, Uvicorn, Pillow, piexif |
+| Backend | Python 3.13, FastAPI, Uvicorn, Pillow, piexif, httpx, BeautifulSoup4, cloudscraper |
 | Frontend | React 18, Vite, Tailwind CSS, Axios, React Dropzone |
 | Containerization | Docker, Docker Compose |
 
@@ -102,7 +103,8 @@ SEO-Image-Toolkit/
 │       ├── routers/
 │       │   ├── images.py       # Upload, rename, inject, download
 │       │   ├── keywords.py     # Keyword file/text upload
-│       │   └── metadata.py     # Metadata inspector endpoint
+│       │   ├── metadata.py     # Metadata inspector endpoint
+│       │   └── scraper.py      # Image scraper & download endpoints
 │       ├── services/
 │       │   ├── renamer.py      # Image rename logic
 │       │   ├── injector.py     # EXIF/PNG keyword injection (piexif.insert)
@@ -130,8 +132,9 @@ SEO-Image-Toolkit/
 │       │   ├── layout/         # Header, Footer, StepIndicator
 │       │   ├── upload/         # ImageDropzone, ImagePreviewGrid, KeywordUploader
 │       │   ├── configure/      # BaseNameInput, RenamePreview, SeoMetadataSettings, ImageSelector
-│       │   ├── process/        # ProcessButton, ProgressBar
+│       │   ├── process/        # ProcessButton, ProgressBar, ProcessingOverlay
 │       │   ├── results/        # ResultsSummary, DownloadButton
+│       │   ├── scraper/        # ImageScraperPage
 │       │   ├── howtouse/       # HowToUsePage, VideoSection, StepGuide
 │       │   ├── metadata/       # MetadataCheckerPage
 │       │   └── ui/             # Toast notifications, ThemeToggle
@@ -265,6 +268,14 @@ Open your browser and go to: **http://localhost:5173**
 - Or use the built-in **"Check Metadata"** tool in the navbar to inspect any image
 - Etsy reads these metadata fields for search ranking
 
+### Image Scraper (Standalone Tool)
+- Click **"Image Scraper"** in the navbar
+- Paste any public website URL and click **"Scrape Images"**
+- The tool extracts all images from the page (`<img>`, `<picture>`, CSS backgrounds, OpenGraph)
+- Select/deselect individual images or use **Select All / Deselect All**
+- Click **"Download X Images (.zip)"** to download selected images as a ZIP
+- Supports Cloudflare-protected sites via automatic bypass (cloudscraper fallback)
+
 ---
 
 ## Running with Docker
@@ -294,6 +305,8 @@ docker-compose down
 | POST | `/api/inject-keywords` | Inject keywords into metadata (with per-field SEO settings) |
 | GET | `/api/download-results` | Download processed images as ZIP |
 | POST | `/api/check-metadata` | Upload an image and get all its metadata (EXIF, XP tags, GPS, PNG chunks) |
+| POST | `/api/scrape-images` | Extract all image URLs from a website (with Cloudflare bypass) |
+| POST | `/api/download-scraped` | Download selected scraped images as a ZIP file |
 | GET | `/api/health` | Health check |
 
 Full interactive API docs: http://localhost:8000/docs

@@ -64,11 +64,6 @@ export async function injectKeywords(sessionId, keywords = null, seoSettings = n
         mode: seoSettings.tags.mode,
         custom_value: seoSettings.tags.customValue,
       },
-      description: {
-        enabled: seoSettings.description.enabled,
-        mode: seoSettings.description.mode,
-        custom_value: seoSettings.description.customValue,
-      },
       comments: {
         enabled: seoSettings.comments.enabled,
         mode: seoSettings.comments.mode,
@@ -82,4 +77,11 @@ export async function injectKeywords(sessionId, keywords = null, seoSettings = n
 
 export function getDownloadUrl(sessionId) {
   return `/api/download-results?session_id=${sessionId}`;
+}
+
+export async function checkMetadata(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await client.post('/check-metadata', formData);
+  return data;
 }

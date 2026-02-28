@@ -24,7 +24,6 @@ const initialState = {
     title: { ...defaultSeoField },
     subject: { ...defaultSeoField },
     tags: { ...defaultSeoField },
-    description: { ...defaultSeoField },
     comments: { ...defaultSeoField },
   },
 };

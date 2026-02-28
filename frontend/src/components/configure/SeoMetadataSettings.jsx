@@ -17,11 +17,6 @@ const SEO_FIELDS = [
     hint: 'Shows as "Tags" in image properties',
   },
   {
-    key: 'description',
-    label: 'Description',
-    hint: 'Shows as "Description" in image properties',
-  },
-  {
     key: 'comments',
     label: 'Comments',
     hint: 'Shows as "Comments" in image properties',

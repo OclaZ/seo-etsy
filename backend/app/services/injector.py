@@ -3,7 +3,6 @@ import glob
 import logging
 from PIL import Image, PngImagePlugin
 import piexif
-from piexif import helper
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +26,15 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
     logger.debug(f"[{filename}] keywords_str={keywords_str[:80]}...")
     logger.debug(f"[{filename}] seo_settings={seo_settings}")
 
-    # Resolve per-field values
+    # Resolve per-field values (4 fields: Title, Subject, Keywords, Comments)
     settings = seo_settings or {}
     title_val = _resolve_field_value(settings.get("title"), keywords_str)
     subject_val = _resolve_field_value(settings.get("subject"), keywords_str)
     tags_val = _resolve_field_value(settings.get("tags"), keywords_str)
-    description_val = _resolve_field_value(settings.get("description"), keywords_str)
     comments_val = _resolve_field_value(settings.get("comments"), keywords_str)
 
     logger.debug(f"[{filename}] resolved -> title={title_val is not None}, subject={subject_val is not None}, "
-                 f"tags={tags_val is not None}, desc={description_val is not None}, comments={comments_val is not None}")
+                 f"tags={tags_val is not None}, comments={comments_val is not None}")
 
     img = Image.open(image_path)
 
@@ -52,11 +50,6 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
                 "1st": {},
                 "thumbnail": None,
             }
-
-        # --- Description (ImageDescription + UserComment) ---
-        if description_val is not None:
-            exif_dict["0th"][piexif.ImageIFD.ImageDescription] = description_val.encode("utf-8")
-            exif_dict["Exif"][piexif.ExifIFD.UserComment] = helper.UserComment.dump(description_val)
 
         # --- Title (XPTitle, tag 0x9C9B) ---
         if title_val is not None:
@@ -107,15 +100,13 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
                 "Title": bool(verify["0th"].get(0x9C9B)),
                 "Subject": bool(verify["0th"].get(0x9C9F)),
                 "Keywords": bool(verify["0th"].get(0x9C9E)),
-                "Description": bool(verify["0th"].get(270)),
                 "Comments": bool(verify["0th"].get(0x9C9C)),
-                "UserComment": bool(verify["Exif"].get(37510)),
             }
             missing = [k for k, v in v_tags.items() if not v]
             if missing:
                 logger.warning(f"[{filename}] VERIFY FAILED — missing: {missing}")
             else:
-                logger.info(f"[{filename}] VERIFY OK — all 6 metadata fields present")
+                logger.info(f"[{filename}] VERIFY OK — all 4 metadata fields present")
         except Exception as e:
             logger.error(f"Failed to save EXIF for {filename}: {e}")
             fallback_dict = {
@@ -126,9 +117,6 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
                 "1st": {},
                 "thumbnail": None,
             }
-            if description_val is not None:
-                fallback_dict["0th"][piexif.ImageIFD.ImageDescription] = description_val.encode("utf-8")
-                fallback_dict["Exif"][piexif.ExifIFD.UserComment] = helper.UserComment.dump(description_val)
             try:
                 exif_bytes = piexif.dump(fallback_dict)
                 piexif.insert(exif_bytes, image_path)
@@ -145,11 +133,9 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
             if isinstance(v, str):
                 png_info.add_text(k, v)
 
-        # Add SEO metadata text chunks per field
+        # Add SEO metadata text chunks (4 fields)
         if tags_val is not None:
             png_info.add_text("Keywords", tags_val)
-        if description_val is not None:
-            png_info.add_text("Description", description_val)
         if title_val is not None:
             png_info.add_text("Title", title_val)
         if comments_val is not None:

@@ -26,6 +26,7 @@ import ProgressBar from './components/process/ProgressBar';
 import ResultsSummary from './components/results/ResultsSummary';
 import DownloadButton from './components/results/DownloadButton';
 import HowToUsePage from './components/howtouse/HowToUsePage';
+import MetadataCheckerPage from './components/metadata/MetadataCheckerPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
@@ -345,6 +346,10 @@ export default function App() {
 
       {currentPage === 'howto' && (
         <HowToUsePage onBackToApp={() => setCurrentPage('app')} />
+      )}
+
+      {currentPage === 'metadata' && (
+        <MetadataCheckerPage />
       )}
 
       <Footer />

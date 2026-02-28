@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import images, keywords
+from app.routers import images, keywords, metadata
 from app.services.session_manager import cleanup_expired_sessions
 from app.config import UPLOAD_DIR
 
@@ -39,6 +39,7 @@ app.add_middleware(
 
 app.include_router(images.router, prefix="/api", tags=["images"])
 app.include_router(keywords.router, prefix="/api", tags=["keywords"])
+app.include_router(metadata.router, prefix="/api", tags=["metadata"])
 
 
 @app.get("/api/health")

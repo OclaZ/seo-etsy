@@ -50,7 +50,6 @@ class SeoSettings(BaseModel):
     title: SeoFieldConfig = SeoFieldConfig()
     subject: SeoFieldConfig = SeoFieldConfig()
     tags: SeoFieldConfig = SeoFieldConfig()
-    description: SeoFieldConfig = SeoFieldConfig()
     comments: SeoFieldConfig = SeoFieldConfig()
 
 

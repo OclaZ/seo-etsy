@@ -18,6 +18,16 @@ export default function Header({ dark, onToggleTheme, currentPage, onNavigate })
 
         <div className="flex items-center gap-2 sm:gap-4">
           <button
+            onClick={() => onNavigate('metadata')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+              currentPage === 'metadata'
+                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+            }`}
+          >
+            Check Metadata
+          </button>
+          <button
             onClick={() => onNavigate('howto')}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
               currentPage === 'howto'

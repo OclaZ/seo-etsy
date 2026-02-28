@@ -28,6 +28,7 @@ import DownloadButton from './components/results/DownloadButton';
 import HowToUsePage from './components/howtouse/HowToUsePage';
 import MetadataCheckerPage from './components/metadata/MetadataCheckerPage';
 import ImageScraperPage from './components/scraper/ImageScraperPage';
+import ImageConverterPage from './components/converter/ImageConverterPage';
 
 export default function App() {
   const { dark, toggle } = useTheme();
@@ -400,6 +401,10 @@ export default function App() {
 
       {currentPage === 'scraper' && (
         <ImageScraperPage />
+      )}
+
+      {currentPage === 'converter' && (
+        <ImageConverterPage />
       )}
 
       <Footer />

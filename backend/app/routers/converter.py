@@ -10,7 +10,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-ALLOWED_OUTPUT = {"jpg", "jpeg", "png"}
+ALLOWED_OUTPUT = {"jpg", "jpeg", "png", "webp"}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 MAX_FILES = 50
 
@@ -22,7 +22,7 @@ async def convert_images(
 ):
     format = format.lower().strip()
     if format not in ALLOWED_OUTPUT:
-        raise HTTPException(status_code=400, detail=f"Invalid format '{format}'. Use: jpg, jpeg, or png")
+        raise HTTPException(status_code=400, detail=f"Invalid format '{format}'. Use: jpg, jpeg, png, or webp")
 
     if len(files) > MAX_FILES:
         raise HTTPException(status_code=400, detail=f"Maximum {MAX_FILES} images per conversion")
@@ -31,8 +31,15 @@ async def convert_images(
         raise HTTPException(status_code=400, detail="No files provided")
 
     # Pillow save format name
-    pil_format = "JPEG" if format in ("jpg", "jpeg") else "PNG"
-    out_ext = "jpg" if format in ("jpg", "jpeg") else "png"
+    if format in ("jpg", "jpeg"):
+        pil_format = "JPEG"
+        out_ext = "jpg" if format == "jpg" else "jpeg"
+    elif format == "webp":
+        pil_format = "WEBP"
+        out_ext = "webp"
+    else:
+        pil_format = "PNG"
+        out_ext = "png"
 
     zip_buffer = io.BytesIO()
     converted = 0
@@ -70,6 +77,9 @@ async def convert_images(
             if pil_format == "JPEG":
                 save_kwargs["quality"] = 95
                 save_kwargs["optimize"] = True
+            elif pil_format == "WEBP":
+                save_kwargs["quality"] = 90
+                save_kwargs["method"] = 4
             elif pil_format == "PNG":
                 save_kwargs["optimize"] = True
 

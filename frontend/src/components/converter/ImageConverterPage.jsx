@@ -24,6 +24,16 @@ const FORMAT_OPTIONS = [
     ),
   },
   {
+    value: 'webp',
+    label: 'WEBP',
+    description: 'Modern format, smaller size',
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
     value: 'jpeg',
     label: 'JPEG',
     description: 'Same as JPG, full extension',
@@ -191,7 +201,17 @@ export default function ImageConverterPage() {
       setDownloadBlob(blob);
       setDone(true);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Conversion failed. Please try again.');
+      let message = 'Conversion failed. Please try again.';
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.detail) message = json.detail;
+        } catch { /* use default message */ }
+      } else if (err.response?.data?.detail) {
+        message = err.response.data.detail;
+      }
+      setError(message);
     } finally {
       setConverting(false);
     }
@@ -385,7 +405,7 @@ export default function ImageConverterPage() {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Convert To
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {FORMAT_OPTIONS.map((fmt) => (
                     <button
                       key={fmt.value}

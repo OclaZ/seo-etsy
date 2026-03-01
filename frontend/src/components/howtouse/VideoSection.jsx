@@ -24,9 +24,8 @@ export default function VideoSection() {
               controls
               preload="metadata"
               className="w-full aspect-video"
-              poster="/imgs/image1-uploadimgs.png"
             >
-              <source src="/howtouse-saas.mp4" type="video/mp4" />
+              <source src="/video adz.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>

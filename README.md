@@ -375,3 +375,6 @@ npm install
 ## License
 
 This project is proprietary software by **Aamir El Amiri**.
+
+ #   s e o - e t s y  
+ 

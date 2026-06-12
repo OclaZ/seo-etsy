@@ -117,7 +117,8 @@ export async function injectKeywords(sessionId, keywords = null, seoSettings = n
 }
 
 export function getDownloadUrl(sessionId) {
-  return `/api/download-results?session_id=${sessionId}`;
+  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '/api';
+  return `${apiBaseUrl}/download-results?session_id=${sessionId}`;
 }
 
 export async function checkMetadata(file) {

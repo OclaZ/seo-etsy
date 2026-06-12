@@ -1,11 +1,50 @@
 import client from './client';
+import imageCompression from 'browser-image-compression';
 
 export async function uploadImages(files, sessionId = null) {
-  const formData = new FormData();
-  files.forEach((file) => formData.append('files', file));
-  const params = sessionId ? { session_id: sessionId } : {};
-  const { data } = await client.post('/upload-images', formData, { params });
-  return data;
+  let currentSessionId = sessionId;
+  const allFilenames = [];
+
+  // Upload files sequentially to avoid Vercel's 4.5MB payload limit
+  for (let file of files) {
+    // If the individual file is > 4MB, compress it first
+    if (file.size > 4 * 1024 * 1024) {
+      console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
+      try {
+        const options = {
+          maxSizeMB: 4,
+          maxWidthOrHeight: 4000,
+          useWebWorker: true
+        };
+        file = await imageCompression(file, options);
+      } catch (e) {
+        console.warn('Image compression failed, trying to upload original', e);
+      }
+    }
+
+    const formData = new FormData();
+    formData.append('files', file);
+    const params = currentSessionId ? { session_id: currentSessionId } : {};
+    
+    try {
+      const { data } = await client.post('/upload-images', formData, { params });
+      if (data.session_id) {
+        currentSessionId = data.session_id;
+      }
+      if (data.filenames) {
+        allFilenames.push(...data.filenames);
+      }
+    } catch (error) {
+      console.error(`Failed to upload ${file.name}:`, error);
+      throw error;
+    }
+  }
+
+  return {
+    session_id: currentSessionId,
+    file_count: allFilenames.length,
+    filenames: allFilenames
+  };
 }
 
 export async function uploadKeywordFile(file, sessionId) {

@@ -24,7 +24,15 @@ async def upload_keyword_file(
         raise HTTPException(status_code=400, detail="No keywords found in file")
 
     keywords_path = session_manager.get_keywords_path(session_id)
-    keywords_path.write_text("\n".join(keywords), encoding="utf-8")
+    keywords_text = "\n".join(keywords)
+    keywords_path.write_text(keywords_text, encoding="utf-8")
+    
+    try:
+        from app.services import blob_manager
+        blob_manager.upload_to_blob(session_id, "keywords/keywords.txt", keywords_text.encode("utf-8"))
+    except Exception as e:
+        logger.error(f"Failed to upload keywords to Blob: {e}")
+        
     logger.info(f"Saved {len(keywords)} keywords for session {session_id}")
 
     return KeywordUploadResponse(
@@ -49,7 +57,15 @@ async def upload_keywords_text(request: KeywordsTextRequest):
         raise HTTPException(status_code=400, detail="No keywords provided")
 
     keywords_path = session_manager.get_keywords_path(request.session_id)
-    keywords_path.write_text("\n".join(keywords), encoding="utf-8")
+    keywords_text = "\n".join(keywords)
+    keywords_path.write_text(keywords_text, encoding="utf-8")
+    
+    try:
+        from app.services import blob_manager
+        blob_manager.upload_to_blob(request.session_id, "keywords/keywords.txt", keywords_text.encode("utf-8"))
+    except Exception as e:
+        logger.error(f"Failed to upload keywords to Blob: {e}")
+        
     logger.info(f"Saved {len(keywords)} keywords for session {request.session_id}")
 
     return KeywordUploadResponse(

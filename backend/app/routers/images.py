@@ -38,6 +38,13 @@ async def upload_images(
 
         file_path = images_dir / file.filename
         file_path.write_bytes(content)
+        
+        try:
+            from app.services import blob_manager
+            blob_manager.upload_to_blob(session_id, f"images/{file.filename}", content)
+        except Exception as e:
+            logger.error(f"Failed to upload {file.filename} to Blob: {e}")
+
         saved_filenames.append(file.filename)
         logger.info(f"Saved: {file.filename} ({len(content)} bytes)")
 
@@ -76,6 +83,15 @@ async def rename_images_endpoint(request: RenameRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     results, errors = renamer.rename_images(str(images_dir), request.base_name)
+    
+    # Sync renames to Blob
+    try:
+        from app.services import blob_manager
+        blob_manager.delete_session(request.session_id)
+        blob_manager.sync_local_to_blob(request.session_id, str(images_dir), subfolder="images")
+    except Exception as e:
+        logger.error(f"Failed to sync renames to Blob: {e}")
+        
     return RenameResponse(
         session_id=request.session_id,
         renamed_count=len(results),
@@ -133,6 +149,13 @@ async def inject_keywords_endpoint(request: InjectRequest):
     logger.info(f"[inject] result: {len(successes)} success, {len(errors)} errors")
     if errors:
         logger.error(f"[inject] errors: {errors}")
+
+    # Sync injected metadata to Blob
+    try:
+        from app.services import blob_manager
+        blob_manager.sync_local_to_blob(request.session_id, str(images_dir), subfolder="images")
+    except Exception as e:
+        logger.error(f"Failed to sync injected metadata to Blob: {e}")
 
     return InjectResponse(
         session_id=request.session_id,

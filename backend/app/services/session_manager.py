@@ -24,7 +24,23 @@ def create_session() -> str:
 def get_session_dir(session_id: str) -> Path:
     session_dir = UPLOAD_DIR / session_id
     if not session_dir.exists():
-        raise ValueError(f"Session not found: {session_id}")
+        # Try to restore from Vercel Blob on new serverless instances
+        from app.services import blob_manager
+        try:
+            blobs = blob_manager.list_blobs(session_id)
+            if blobs:
+                session_dir.mkdir(parents=True, exist_ok=True)
+                (session_dir / "images").mkdir(exist_ok=True)
+                (session_dir / "keywords").mkdir(exist_ok=True)
+                _sessions[session_id] = {"created": time.time(), "dir": str(session_dir)}
+                blob_manager.download_session(session_id, str(session_dir))
+                logger.info(f"Restored session {session_id} from Vercel Blob")
+            else:
+                raise ValueError(f"Session not found locally or in Blob: {session_id}")
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"Session not found: {session_id} (Blob error: {e})")
     return session_dir
 
 
@@ -37,7 +53,16 @@ def get_keywords_path(session_id: str) -> Path:
 
 
 def session_exists(session_id: str) -> bool:
-    return (UPLOAD_DIR / session_id).exists()
+    if (UPLOAD_DIR / session_id).exists():
+        return True
+    try:
+        from app.services import blob_manager
+        blobs = blob_manager.list_blobs(session_id)
+        if blobs:
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def cleanup_expired_sessions(cleanup_all: bool = False):

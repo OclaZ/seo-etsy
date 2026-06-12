@@ -7,13 +7,14 @@ export async function uploadImages(files, sessionId = null) {
 
   // Upload files sequentially to avoid Vercel's 4.5MB payload limit
   for (let file of files) {
-    // If the individual file is > 4MB, compress it first
-    if (file.size > 4 * 1024 * 1024) {
-      console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
+    const originalName = file.name;
+    // If the individual file is > 3.5MB, compress it first
+    if (file.size > 3.5 * 1024 * 1024) {
+      console.log(`Compressing ${originalName} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
       try {
         const options = {
-          maxSizeMB: 4,
-          maxWidthOrHeight: 4000,
+          maxSizeMB: 3.5,
+          maxWidthOrHeight: 3000,
           useWebWorker: true
         };
         file = await imageCompression(file, options);
@@ -23,7 +24,8 @@ export async function uploadImages(files, sessionId = null) {
     }
 
     const formData = new FormData();
-    formData.append('files', file);
+    // Explicitly pass originalName to ensure the backend receives the correct file extension
+    formData.append('files', file, originalName);
     const params = currentSessionId ? { session_id: currentSessionId } : {};
     
     try {

@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from app.models.schemas import (
@@ -56,6 +56,68 @@ async def upload_images(
         file_count=len(saved_filenames),
         filenames=saved_filenames,
     )
+
+
+@router.post("/upload-chunk")
+async def upload_chunk(
+    chunk: UploadFile = File(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+    file_id: str = Form(...),
+    session_id: str | None = Form(None),
+):
+    if not session_id or not session_manager.session_exists(session_id):
+        session_id = session_manager.create_session()
+
+    images_dir = session_manager.get_images_dir(session_id)
+    chunks_dir = session_manager.get_session_dir(session_id) / "chunks" / file_id
+    chunks_dir.mkdir(parents=True, exist_ok=True)
+
+    chunk_content = await chunk.read()
+    chunk_path = chunks_dir / str(chunk_index)
+    chunk_path.write_bytes(chunk_content)
+    logger.info(f"Saved chunk {chunk_index+1}/{total_chunks} for {file_id}")
+
+    # Check if all chunks have arrived
+    saved_chunks = list(chunks_dir.iterdir())
+    if len(saved_chunks) == total_chunks:
+        logger.info(f"All chunks received for {file_id}, merging...")
+        final_path = images_dir / file_id
+        
+        with open(final_path, "wb") as outfile:
+            for i in range(total_chunks):
+                chunk_file = chunks_dir / str(i)
+                outfile.write(chunk_file.read_bytes())
+                
+        # Validate merged file
+        merged_bytes = final_path.read_bytes()
+        valid, error = validate_image_file(file_id, len(merged_bytes))
+        
+        # Cleanup chunks
+        import shutil
+        shutil.rmtree(chunks_dir, ignore_errors=True)
+        
+        if not valid:
+            final_path.unlink()
+            raise HTTPException(status_code=400, detail=f"Invalid file: {error}")
+            
+        # Upload completed file to Vercel Blob
+        try:
+            from app.services import blob_manager
+            blob_manager.upload_to_blob(session_id, f"images/{file_id}", merged_bytes)
+        except Exception as e:
+            logger.error(f"Failed to upload merged {file_id} to Blob: {e}")
+            
+        return {
+            "session_id": session_id,
+            "filename": file_id,
+            "status": "complete"
+        }
+        
+    return {
+        "session_id": session_id,
+        "status": "chunk_received"
+    }
 
 
 @router.get("/rename-preview", response_model=RenamePreviewResponse)
@@ -180,10 +242,19 @@ async def download_results(session_id: str = Query(...)):
     zip_name = f"aamir-{nb_images}images-{rand_suffix}.zip"
 
     zip_buffer = zipper.create_zip(str(images_dir))
-    return StreamingResponse(
-        zip_buffer,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{zip_name}"'
-        },
-    )
+    
+    try:
+        from app.services import blob_manager
+        # Ensure the filename ends in .zip
+        blob_url = blob_manager.upload_to_blob(session_id, zip_name, zip_buffer.getvalue())
+        return {"url": blob_url}
+    except Exception as e:
+        logger.error(f"Failed to upload zip to Blob: {e}")
+        # Fallback to streaming if blob fails
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{zip_name}"'
+            },
+        )

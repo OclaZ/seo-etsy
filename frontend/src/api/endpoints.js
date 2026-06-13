@@ -4,41 +4,40 @@ import imageCompression from 'browser-image-compression';
 export async function uploadImages(files, sessionId = null) {
   let currentSessionId = sessionId;
   const allFilenames = [];
+  const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB
 
-  // Upload files sequentially to avoid Vercel's 4.5MB payload limit
-  for (let file of files) {
+  // Upload files using chunking to avoid Vercel's 4.5MB payload limit
+  for (const file of files) {
     const originalName = file.name;
-    // If the individual file is > 3.5MB, compress it first
-    if (file.size > 3.5 * 1024 * 1024) {
-      console.log(`Compressing ${originalName} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
-      try {
-        const options = {
-          maxSizeMB: 3.5,
-          maxWidthOrHeight: 3000,
-          useWebWorker: true
-        };
-        file = await imageCompression(file, options);
-      } catch (e) {
-        console.warn('Image compression failed, trying to upload original', e);
-      }
-    }
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-    const formData = new FormData();
-    // Explicitly pass originalName to ensure the backend receives the correct file extension
-    formData.append('files', file, originalName);
-    const params = currentSessionId ? { session_id: currentSessionId } : {};
-    
-    try {
-      const { data } = await client.post('/upload-images', formData, { params });
-      if (data.session_id) {
-        currentSessionId = data.session_id;
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      
+      const formData = new FormData();
+      formData.append('chunk', chunk, originalName);
+      formData.append('chunk_index', chunkIndex);
+      formData.append('total_chunks', totalChunks);
+      formData.append('file_id', originalName);
+      if (currentSessionId) {
+        formData.append('session_id', currentSessionId);
       }
-      if (data.filenames) {
-        allFilenames.push(...data.filenames);
+      
+      try {
+        const { data } = await client.post('/upload-chunk', formData);
+        if (data.session_id) {
+          currentSessionId = data.session_id;
+        }
+        // If it's the last chunk, it returns the final filename
+        if (data.filename && chunkIndex === totalChunks - 1) {
+          allFilenames.push(data.filename);
+        }
+      } catch (error) {
+        console.error(`Failed to upload chunk ${chunkIndex} of ${originalName}:`, error);
+        throw error;
       }
-    } catch (error) {
-      console.error(`Failed to upload ${file.name}:`, error);
-      throw error;
     }
   }
 
@@ -116,9 +115,11 @@ export async function injectKeywords(sessionId, keywords = null, seoSettings = n
   return data;
 }
 
-export function getDownloadUrl(sessionId) {
-  const apiBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '/api';
-  return `${apiBaseUrl}/download-results?session_id=${sessionId}`;
+export async function getDownloadUrl(sessionId) {
+  const { data } = await client.get('/download-results', {
+    params: { session_id: sessionId }
+  });
+  return data.url;
 }
 
 export async function checkMetadata(file) {

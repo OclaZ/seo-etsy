@@ -39,8 +39,10 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
     img = Image.open(image_path)
 
     if ext in [".jpg", ".jpeg"]:
+        # Close PIL image first as we'll use piexif directly on the file
+        img.close()
         try:
-            exif_dict = piexif.load(img.info.get("exif", b""))
+            exif_dict = piexif.load(image_path)
         except Exception:
             exif_dict = {
                 "0th": {},
@@ -85,11 +87,9 @@ def add_keywords_to_image(image_path: str, keywords: list[str], seo_settings: di
                 logger.warning(f"Could not set XPSubject for {filename}: {e}")
 
         # --- Dump and save ---
-        # Save image first, then inject EXIF separately with piexif.insert()
-        # This avoids PIL stripping non-standard XP tags during save.
+        # Inject EXIF directly into the original file without re-encoding!
+        # This preserves 100% of the original 4K quality and file size.
         try:
-            img.save(image_path, "jpeg", quality=95)
-            img.close()
             exif_bytes = piexif.dump(exif_dict)
             piexif.insert(exif_bytes, image_path)
             logger.info(f"JPEG metadata injected: {filename}")

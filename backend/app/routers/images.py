@@ -250,11 +250,21 @@ async def download_results(session_id: str = Query(...)):
         return {"url": blob_url}
     except Exception as e:
         logger.error(f"Failed to upload zip to Blob: {e}")
-        # Fallback to streaming if blob fails
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={
-                "Content-Disposition": f'attachment; filename="{zip_name}"'
-            },
-        )
+        # Fallback to streaming URL if blob fails
+        return {"url": f"/api/download-stream?session_id={session_id}&zip_name={zip_name}"}
+
+@router.get("/download-stream")
+async def download_stream(session_id: str = Query(...), zip_name: str = Query(...)):
+    try:
+        images_dir = session_manager.get_images_dir(session_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    zip_buffer = zipper.create_zip(str(images_dir))
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{zip_name}"'
+        },
+    )

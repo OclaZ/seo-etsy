@@ -152,6 +152,12 @@ export async function getDownloadUrl(sessionId) {
   const { data } = await client.get('/download-results', {
     params: { session_id: sessionId }
   });
+  
+  if (data.url && data.url.startsWith('/api/download-stream')) {
+    const apiBaseUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '/api';
+    return `${apiBaseUrl}${data.url.replace('/api', '')}`;
+  }
+  
   return data.url;
 }
 

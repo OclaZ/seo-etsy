@@ -25,6 +25,7 @@ import ProcessButton from './components/process/ProcessButton';
 import ProcessingOverlay from './components/process/ProcessingOverlay';
 import ResultsSummary from './components/results/ResultsSummary';
 import DownloadButton from './components/results/DownloadButton';
+import UploadProgress from './components/upload/UploadProgress';
 import HowToUsePage from './components/howtouse/HowToUsePage';
 import MetadataCheckerPage from './components/metadata/MetadataCheckerPage';
 import ImageScraperPage from './components/scraper/ImageScraperPage';
@@ -37,6 +38,7 @@ export default function App() {
   const previewTimeout = useRef(null);
   const [currentPage, setCurrentPage] = useState('app');
   const [processingStatus, setProcessingStatus] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
 
   const showToast = useCallback(
     (message, type = 'success') => {
@@ -49,11 +51,16 @@ export default function App() {
   const handleImageDrop = useCallback(
     async (files) => {
       try {
-        const data = await uploadImages(files, state.sessionId);
+        setUploadProgress({ phase: 'uploading', currentFile: '', fileIndex: 0, totalFiles: files.length, fileProgress: 0, overallProgress: 0 });
+        const data = await uploadImages(files, state.sessionId, (progress) => {
+          setUploadProgress(progress);
+        });
+        setUploadProgress(null);
         dispatch({ type: 'SET_SESSION', payload: data.session_id });
         dispatch({ type: 'ADD_IMAGES', payload: files });
         showToast(`${data.file_count} image(s) uploaded`);
       } catch (err) {
+        setUploadProgress(null);
         showToast(err.response?.data?.detail || 'Upload failed', 'error');
       }
     },
@@ -272,7 +279,8 @@ export default function App() {
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                   Upload Your Images & Keywords
                 </h2>
-                <ImageDropzone onDrop={handleImageDrop} />
+                <ImageDropzone onDrop={handleImageDrop} disabled={!!uploadProgress} />
+                <UploadProgress progress={uploadProgress} />
                 <ImagePreviewGrid
                   files={state.images}
                   onRemove={handleRemoveImage}

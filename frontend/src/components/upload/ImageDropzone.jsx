@@ -39,7 +39,7 @@ export default function ImageDropzone({ onDrop, disabled }) {
               <span className="text-orange-500 font-semibold">browse</span>
             </p>
             <p className="text-sm text-gray-400 dark:text-gray-500">
-              Supports JPG, JPEG, PNG (max 50 files, 10MB each)
+              Supports JPG, JPEG, PNG (max 50 files, 50MB each)
             </p>
           </>
         )}

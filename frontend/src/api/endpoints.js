@@ -1,20 +1,38 @@
 import client from './client';
 import imageCompression from 'browser-image-compression';
 
-export async function uploadImages(files, sessionId = null) {
+export async function uploadImages(files, sessionId = null, onProgress = null) {
   let currentSessionId = sessionId;
   const allFilenames = [];
   const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB
+  const totalFiles = files.length;
+
+  // Calculate total bytes for overall progress
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  let uploadedBytes = 0;
 
   // Upload files using chunking to avoid Vercel's 4.5MB payload limit
-  for (const file of files) {
+  for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+    const file = files[fileIndex];
     const originalName = file.name;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    if (onProgress) {
+      onProgress({
+        phase: 'uploading',
+        currentFile: originalName,
+        fileIndex,
+        totalFiles,
+        fileProgress: 0,
+        overallProgress: totalBytes > 0 ? (uploadedBytes / totalBytes) * 100 : 0,
+      });
+    }
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, file.size);
       const chunk = file.slice(start, end);
+      const chunkSize = end - start;
       
       const formData = new FormData();
       formData.append('chunk', chunk, originalName);
@@ -30,15 +48,30 @@ export async function uploadImages(files, sessionId = null) {
         if (data.session_id) {
           currentSessionId = data.session_id;
         }
-        // If it's the last chunk, it returns the final filename
         if (data.filename && chunkIndex === totalChunks - 1) {
           allFilenames.push(data.filename);
+        }
+
+        uploadedBytes += chunkSize;
+        if (onProgress) {
+          onProgress({
+            phase: 'uploading',
+            currentFile: originalName,
+            fileIndex,
+            totalFiles,
+            fileProgress: ((chunkIndex + 1) / totalChunks) * 100,
+            overallProgress: totalBytes > 0 ? (uploadedBytes / totalBytes) * 100 : 0,
+          });
         }
       } catch (error) {
         console.error(`Failed to upload chunk ${chunkIndex} of ${originalName}:`, error);
         throw error;
       }
     }
+  }
+
+  if (onProgress) {
+    onProgress({ phase: 'complete', overallProgress: 100 });
   }
 
   return {
